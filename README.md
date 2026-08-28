@@ -1,26 +1,65 @@
-# Federated Unlearning via Gradient Ascent + Knowledge Distillation
+# Federated Unlearning
 
-Course-project repository. Federated Learning trains a shared model
-across clients without pooling raw data; this project studies how to
-efficiently make a trained federated model "forget" one client's
-contribution, without paying the cost of retraining from scratch.
+Federated Learning trains a shared model across clients without
+pooling raw data. This project studies how to make a trained
+federated model efficiently "forget" one client's contribution —
+via Gradient Ascent + Knowledge Distillation — without paying the
+cost of retraining from scratch.
 
-See `docs/architecture.md` for the full bird's-eye system diagram and
-`docs/methodology.md` / `docs/roadmap.md` for the approach and status.
+This repo is a **holder / scaffold** — the folder shape and phase
+briefs are already set up so that whoever opens it next (including
+future-you) can go straight to their segment and start working, with
+zero setup.
 
-## Status
+## Current Phase
 
-- ✅ **Working now:** MNIST data pipeline, IID/Non-IID client
-  partitioning, FedAvg federated training, checkpointing, metrics
-  logging — i.e. everything needed to produce `M_old`.
-- ⏳ **Scaffolded, not yet implemented:** full-retraining baseline,
-  Gradient Ascent unlearning, Knowledge Distillation, MIA evaluation.
-  These raise `NotImplementedError` with a pointer to the roadmap
-  phase that will fill them in — see `docs/roadmap.md`.
+*(Kept in sync with `STATUS.md` — that file is the source of truth; this is just a glance.)*
 
-No experimental results are fabricated anywhere in this repo. Numbers
-only ever come from `artifacts/experiments/*/metrics.csv` after an
-actual run.
+- [x] Phase 00 — Repo & Skeleton
+- [x] Phase 01 — Data Pipeline
+- [x] Phase 02 — Model + FedAvg
+- [x] Phase 03 — Initial FL Experiment (code complete; not yet run)
+- [ ] Phase 04 — Full Retraining Baseline
+- [ ] Phase 05 — Gradient Ascent
+- [ ] Phase 06 — Knowledge Distillation
+- [ ] Phase 07 — Unlearning Engine
+- [ ] Phase 08 — Evaluation Framework (partial)
+- [ ] Phase 09 — MIA
+- [ ] Phase 10 — Controlled Experiments
+- [ ] Phase 11 — Plots + Reports
+- [ ] Phase 12 — Final Report / Viva
+
+**Progress**
+
+```
+Data pipeline      ██████████ 100%
+FL baseline        ██████████ 100%
+Evaluation utils   ████░░░░░░  40%
+Unlearning         ░░░░░░░░░░   0%
+Experiments/report ░░░░░░░░░░   0%
+```
+
+## Where to look
+
+| I want to... | Go to |
+|---|---|
+| Understand *why* the system is designed this way | [`docs/architecture/federated-unlearning-architecture.md`](docs/architecture/federated-unlearning-architecture.md) — bird's-eye diagram + module status |
+| Understand the approach and formulas (FedAvg, GA, KD) | [`docs/methodology.md`](docs/methodology.md) |
+| Understand *what to build next* and the full phase order | [`BUILD_GUIDE.md`](BUILD_GUIDE.md) — the single working copy, edit this if the plan changes |
+| See where the project currently stands | [`STATUS.md`](STATUS.md) |
+| Work on one specific phase | [`phases/`](phases/) — each phase has its own self-contained `PHASE.md` |
+| Log what I actually did | [`work-reports/`](work-reports/) — `daily/` each session, `weekly/` roll-ups, `milestones/` on phase completion |
+| Run the initial FL experiment | `python experiments/run_initial_fl.py --config configs/initial_fl.yaml` |
+| Run tests | `pytest tests/` |
+
+## How this repo is organized
+
+- `docs/architecture/` — bird's-eye diagram + implementation-status table (reference, explains *why*). `docs/api/`, `docs/decisions/`, `docs/deployment/`, `docs/diagrams/` are optional, fill in as needed (see each folder's `README.md`).
+- `BUILD_GUIDE.md` (root) — the one living build-order document; edit this if scope/order changes, then re-derive `phases/*/PHASE.md` from it
+- `phases/phase-00-...` through `phases/phase-12-...` — one folder per build phase, each with a `PHASE.md` containing that phase's Goal, Depends On, Tasks, Definition of Done, and Handoff Notes
+- `src/` — organized by **responsibility**, not technology: `data/`, `models/`, `federated/`, `unlearning/`, `baselines/`, `evaluation/`, `utils/`
+- `configs/` — every experiment parameter lives here (YAML), never hard-coded in `src/`
+- `experiments/`, `tests/`, `artifacts/` — runnable scripts, unit tests, and experiment outputs (configs/checkpoints/metrics/logs) respectively
 
 ## Setup
 
@@ -29,51 +68,20 @@ python -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
-## Run the initial FL experiment
+## No fabricated results
 
-```bash
-python experiments/run_initial_fl.py --config configs/initial_fl.yaml
-```
+Numbers only ever come from `artifacts/experiments/*/metrics.csv`
+after an actual run. Modules not yet implemented raise
+`NotImplementedError` pointing at the phase that will fill them in —
+see `STATUS.md`.
 
-This trains the pipeline-validation configuration (5 clients, 50
-rounds, 10 local epochs/round) and writes to
-`artifacts/experiments/initial_fl/`:
+## The rule
 
-```text
-config.yaml            # exact config used
-metrics.csv            # per-round metrics
-training.log           # training log
-partition_metadata.json
-checkpoints/round_*.pt
-```
+Whoever stops mid-phase, before stopping:
 
-## Tests
+1. Ticks every checkbox actually finished in that phase's `PHASE.md`.
+2. Writes 2-5 sentences in that phase's **Handoff Notes**.
+3. Updates `STATUS.md` (and the Current Phase checklist above, if a phase just finished).
+4. Adds one file to `work-reports/daily/` for the session (copy `work-reports/daily/TEMPLATE.md`).
 
-```bash
-pytest tests/
-```
-
-## Repository layout
-
-```text
-configs/            # experiment configuration (YAML) — no hard-coded params in code
-src/data/           # MNIST loading + IID/Non-IID partitioning
-src/models/         # model architectures (small CNN)
-src/federated/      # client, server, FedAvg, round tracking
-src/unlearning/     # forget-client selection, Gradient Ascent, KD, engine (partly scaffold)
-src/baselines/      # full-retraining reference (scaffold)
-src/evaluation/     # accuracy, forgetting, MIA, cost, comparison table
-src/utils/          # config loading, logging, checkpointing, seeding
-experiments/        # runnable experiment scripts
-artifacts/          # experiment outputs (configs, metrics, logs, checkpoints)
-docs/               # architecture, methodology, roadmap
-tests/              # unit tests
-```
-
-## Engineering principles
-
-Separation of concerns across the module boundaries above; every
-result reproducible from a saved config; no hard-coded experiment
-parameters; every experiment checkpoints its model(s); fair
-comparisons use the same architecture and evaluation data; results are
-never fabricated.
+Follow that and no handoff call is ever needed — just open your `PHASE.md` and continue.
