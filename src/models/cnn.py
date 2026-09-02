@@ -30,4 +30,8 @@ class SimpleCNN(nn.Module):
 def build_model(name: str, num_classes: int = 10) -> nn.Module:
     if name == "cnn":
         return SimpleCNN(num_classes=num_classes)
+    if name == "resnet18":
+        from src.models.resnet import build_resnet18
+
+        return build_resnet18(num_classes=num_classes)
     raise ValueError(f"Unknown model name: {name}")

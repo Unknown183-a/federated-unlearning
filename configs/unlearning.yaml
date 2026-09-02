@@ -4,7 +4,7 @@
 experiment_name: unlearning_ga_kd
 seed: 42
 
-base_checkpoint: artifacts/experiments/initial_fl/checkpoints/round_050.pt
+base_checkpoint: artifacts/experiments/cifar100_fl/checkpoints/round_020.pt
 forget_client_id: 0
 
 full_retraining:
