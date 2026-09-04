@@ -30,6 +30,9 @@ def run_full_retraining(
     config keys:
         num_rounds, local_epochs, local_lr — from configs/unlearning.yaml's
             `full_retraining` section (never hard-coded, per repo convention).
+        mu, momentum, weight_decay (optional) — FedProx proximal term weight
+            and SGD momentum/weight decay; all default to 0.0 (plain FedAvg,
+            vanilla SGD) if omitted.
         batch_size, device                 — from the base FL config, so
             M_retrain trains under the same conditions as M_old.
         artifacts_dir                      — where checkpoints/metrics.csv/
@@ -66,6 +69,9 @@ def run_full_retraining(
         local_epochs=config["local_epochs"],
         local_lr=config["local_lr"],
         test_client=test_client,
+        mu=config.get("mu", 0.0),
+        momentum=config.get("momentum", 0.0),
+        weight_decay=config.get("weight_decay", 0.0),
     )
 
     save_checkpoint(m_retrain, artifacts_dir / "m_retrain_final.pt", extra={"forget_client_id": forget_client_id})

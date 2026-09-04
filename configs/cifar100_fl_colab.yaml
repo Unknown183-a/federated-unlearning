@@ -1,5 +1,4 @@
-# Real (non-pipeline-validation) Federated Learning experiment: CIFAR-100 + ResNet-18.
-# This produces M_old — the base model that later phases unlearn from.
+# Same as configs/cifar100_fl.yaml but targeting CUDA (Colab/GPU runs).
 experiment_name: cifar100_fl
 seed: 42
 
@@ -7,8 +6,8 @@ data:
   dataset: cifar100
   data_dir: data/raw
   num_clients: 5
-  partition: non_iid       # iid | non_iid
-  non_iid_alpha: 0.5       # Dirichlet alpha; lower = more label skew per client
+  partition: non_iid
+  non_iid_alpha: 0.5
   batch_size: 64
 
 model:
@@ -19,12 +18,12 @@ federated:
   num_rounds: 20
   local_epochs: 2
   local_lr: 0.01
-  clients_per_round: 5     # == num_clients for this experiment
+  clients_per_round: 5
   aggregation: fedavg
   momentum: 0.9
   weight_decay: 0.0005
 
-device: cpu   # cpu | cuda
+device: cuda
 
 output:
   artifacts_dir: artifacts/experiments/cifar100_fl

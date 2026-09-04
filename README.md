@@ -18,8 +18,8 @@ zero setup.
 - [x] Phase 00 — Repo & Skeleton
 - [x] Phase 01 — Data Pipeline
 - [x] Phase 02 — Model + FedAvg
-- [x] Phase 03 — Initial FL Experiment (code complete; not yet run)
-- [ ] Phase 04 — Full Retraining Baseline
+- [x] Phase 03 — Initial FL Experiment (real result: M_old = 60.02% test acc., CIFAR-100+ResNet-18)
+- [x] Phase 04 — Full Retraining Baseline (real result: M_retrain = 31.86% test acc., 24.43% forget-client acc.)
 - [ ] Phase 05 — Gradient Ascent
 - [ ] Phase 06 — Knowledge Distillation
 - [ ] Phase 07 — Unlearning Engine

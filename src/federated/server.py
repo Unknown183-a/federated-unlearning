@@ -30,10 +30,26 @@ class FederatedServer:
         self.round_manager = RoundManager()
         self.logger = get_logger("federated.server", self.artifacts_dir / "training.log")
 
-    def run(self, num_rounds: int, local_epochs: int, local_lr: float, test_client: FederatedClient | None = None):
+    def run(
+        self,
+        num_rounds: int,
+        local_epochs: int,
+        local_lr: float,
+        test_client: FederatedClient | None = None,
+        mu: float = 0.0,
+        momentum: float = 0.0,
+        weight_decay: float = 0.0,
+    ):
         for round_num in range(1, num_rounds + 1):
             updates = [
-                client.local_train(self.global_model, epochs=local_epochs, lr=local_lr)
+                client.local_train(
+                    self.global_model,
+                    epochs=local_epochs,
+                    lr=local_lr,
+                    mu=mu,
+                    momentum=momentum,
+                    weight_decay=weight_decay,
+                )
                 for client in self.clients.values()
             ]
             new_state = fedavg(updates)

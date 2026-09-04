@@ -4,13 +4,16 @@
 experiment_name: unlearning_ga_kd
 seed: 42
 
-base_checkpoint: artifacts/experiments/cifar100_fl/checkpoints/round_020.pt
+base_checkpoint: artifacts/experiments/cifar100_fl/imported_original_model.pt
 forget_client_id: 0
 
 full_retraining:
   num_rounds: 50
-  local_epochs: 10
+  local_epochs: 10   # FedProx (mu below) is specifically designed to tolerate this many
   local_lr: 0.01
+  mu: 0.01            # FedProx proximal term weight; mu=0 recovers plain FedAvg
+  momentum: 0.9
+  weight_decay: 0.0005
 
 gradient_ascent:
   lr: 0.001

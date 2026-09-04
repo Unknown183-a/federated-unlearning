@@ -27,13 +27,34 @@ class FederatedClient:
         self.batch_size = batch_size
         self.device = device
 
-    def local_train(self, global_model: nn.Module, epochs: int, lr: float) -> ClientUpdate:
-        """Train a local copy of the global model for `epochs` epochs and return the update."""
+    def local_train(
+        self,
+        global_model: nn.Module,
+        epochs: int,
+        lr: float,
+        mu: float = 0.0,
+        momentum: float = 0.0,
+        weight_decay: float = 0.0,
+    ) -> ClientUpdate:
+        """Train a local copy of the global model for `epochs` epochs and return the update.
+
+        `mu` is the FedProx proximal term weight (Li et al., 2018):
+        adds (mu/2) * ||w - w_global||^2 to the loss, penalizing local
+        drift away from the global model. `mu=0` recovers plain FedAvg
+        local training exactly — this is the default so existing callers
+        (e.g. the MNIST pipeline-validation experiment) are unaffected.
+
+        FedProx's specific purpose is to make training stable with *more*
+        local epochs on non-IID data (rather than needing to keep epochs
+        low to avoid client drift, which is the plain-FedAvg workaround).
+        """
         model = copy.deepcopy(global_model).to(self.device)
         model.train()
-        optimizer = torch.optim.SGD(model.parameters(), lr=lr)
+        optimizer = torch.optim.SGD(model.parameters(), lr=lr, momentum=momentum, weight_decay=weight_decay)
         criterion = nn.CrossEntropyLoss()
         loader = DataLoader(self.dataset, batch_size=self.batch_size, shuffle=True)
+
+        global_params = [p.detach().clone().to(self.device) for p in global_model.parameters()]
 
         total_loss, num_batches = 0.0, 0
         for _ in range(epochs):
@@ -41,6 +62,11 @@ class FederatedClient:
                 x, y = x.to(self.device), y.to(self.device)
                 optimizer.zero_grad()
                 loss = criterion(model(x), y)
+                if mu > 0:
+                    prox_term = sum(
+                        (w - w_glob).pow(2).sum() for w, w_glob in zip(model.parameters(), global_params)
+                    )
+                    loss = loss + (mu / 2) * prox_term
                 loss.backward()
                 optimizer.step()
                 total_loss += loss.item()

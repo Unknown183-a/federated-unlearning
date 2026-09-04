@@ -61,6 +61,9 @@ def main(config_path: str) -> None:
         local_epochs=cfg.federated.local_epochs,
         local_lr=cfg.federated.local_lr,
         test_client=test_client,
+        mu=cfg.federated.get("mu", 0.0),
+        momentum=cfg.federated.get("momentum", 0.0),
+        weight_decay=cfg.federated.get("weight_decay", 0.0),
     )
     print(f"Done. Artifacts written to {artifacts_dir}")
 
