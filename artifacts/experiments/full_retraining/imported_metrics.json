@@ -1,0 +1,8 @@
+{
+  "source": "imported from pre-refactor retrain_baseline.py checkpoint (retrained_model.pt)",
+  "forget_client_id": 0,
+  "num_forget_samples": 10003,
+  "overall_test_accuracy": 0.3186,
+  "forget_client_accuracy": 0.24432670198940318,
+  "note": "Forget-client split reconstructed by re-running retrain_baseline.py's exact legacy partition_dirichlet() with set_seed(42), since the new src/data/partition.py uses a different RNG API and would not reproduce it."
+}

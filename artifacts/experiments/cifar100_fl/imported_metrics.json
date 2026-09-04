@@ -1,0 +1,5 @@
+{
+  "source": "imported from pre-refactor main.py checkpoint (original_model.pt)",
+  "overall_test_accuracy": 0.6002,
+  "note": "Per-client / forget-client accuracy not available: main.py's partition was unseeded, so client assignment cannot be reconstructed."
+}
