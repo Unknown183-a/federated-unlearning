@@ -36,7 +36,10 @@ def run_full_retraining(
         batch_size, device                 — from the base FL config, so
             M_retrain trains under the same conditions as M_old.
         artifacts_dir                      — where checkpoints/metrics.csv/
-            the final M_retrain checkpoint are written.
+            the final M_retrain checkpoint are written. If a checkpoint
+            already exists here (e.g. after a Colab disconnect), training
+            resumes from the latest one instead of restarting from round 1
+            (set config["resume"] = False to force a fresh run).
         save_every_n_rounds                — passed straight to FederatedServer.
         test_dataset (optional)            — held-out test set for per-round
             accuracy tracking during retraining.
@@ -72,6 +75,7 @@ def run_full_retraining(
         mu=config.get("mu", 0.0),
         momentum=config.get("momentum", 0.0),
         weight_decay=config.get("weight_decay", 0.0),
+        resume=config.get("resume", True),
     )
 
     save_checkpoint(m_retrain, artifacts_dir / "m_retrain_final.pt", extra={"forget_client_id": forget_client_id})
