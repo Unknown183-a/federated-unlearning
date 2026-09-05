@@ -36,26 +36,32 @@ forget-client accuracy for `M_retrain`. Results, written to
 `artifacts/experiments/{cifar100_fl,full_retraining}/imported_metrics.json`:
 
 - `M_old` overall test accuracy: **60.02%**
-- `M_retrain` overall test accuracy: **31.86%**
-- `M_retrain` forget-client accuracy: **24.43%**
+- `M_retrain` overall test accuracy (plain FedAvg, superseded): ~~31.86%~~
+- `M_retrain` forget-client accuracy (plain FedAvg, superseded): ~~24.43%~~
 
-`M_retrain`'s overall accuracy is notably lower than `M_old`'s despite
-more rounds (50 vs 20) and local epochs (10 vs 2) — likely FedAvg
-client drift from high `local_epochs` on non-IID data (see FedProx, Li
-et al. 2018), though the original per-round logs weren't preserved to
-confirm this over a training-instability explanation. Flagged as a
-limitation to revisit in the final report if time allows; not a
-blocker for Phase 05, which needs *a* `M_retrain` reference to compare
-`M_unlearn` against, not a perfect one.
+The plain-FedAvg `M_retrain` above scored notably lower than `M_old`
+despite more rounds (50 vs 20) and local epochs (10 vs 2) — likely
+FedAvg client drift from high `local_epochs` on non-IID data (see
+FedProx, Li et al. 2018).
 
-**Follow-up:** implemented FedProx (proximal term, `mu`) in
+**Follow-up (resolved):** implemented FedProx (proximal term, `mu`) in
 `src/federated/client.py::local_train` and threaded it through
 `FederatedServer.run` and `run_full_retraining`, defaulting to `mu=0.0`
 (exact plain-FedAvg behavior) so Phase 03's MNIST pipeline check is
-unaffected. `configs/unlearning.yaml`'s `full_retraining` section now
-sets `mu: 0.01, momentum: 0.9, weight_decay: 0.0005` — keeping
+unaffected. `configs/unlearning.yaml`'s `full_retraining` section sets
+`mu: 0.01, momentum: 0.9, weight_decay: 0.0005`, keeping
 `local_epochs: 10` (FedProx's proximal term is specifically meant to
 make that tolerable on non-IID data, rather than needing to cut local
-epochs). Smoke-tested on synthetic data; not yet rerun against real
-CIFAR-100 — pending GPU (Colab) run to replace the current `M_retrain`
-result above with an improved one.
+epochs). Reran on GPU (Colab, T4) via `run_full_retraining.py` with
+`configs/cifar100_fl_colab.yaml` — took two sessions due to a Colab
+disconnect at round 35, recovered cleanly via the checkpoint-resume
+support in `FederatedServer` (checkpoints stored on Google Drive to
+survive the disconnect). Final result:
+
+- `M_retrain` overall test accuracy: **70.89%** (exceeds `M_old`'s 60.02%)
+- `M_retrain` forget-client accuracy: **65.30%**
+
+This is now the official Phase 04 result and the `M_retrain` reference
+for Phase 05-07. Checkpoints and metrics live in
+`artifacts/experiments/full_retraining/` (`m_retrain_final.pt`,
+`metrics.csv`, `forget_client_metrics.json`).
