@@ -20,7 +20,7 @@ zero setup.
 - [x] Phase 02 — Model + FedAvg
 - [x] Phase 03 — Initial FL Experiment (real result: M_old = 60.02% test acc., CIFAR-100+ResNet-18)
 - [x] Phase 04 — Full Retraining Baseline (real result: M_retrain = 70.89% test acc., 65.30% forget-client acc., via FedProx)
-- [ ] Phase 05 — Gradient Ascent
+- [x] Phase 05 — Gradient Ascent (real result: M_unlearn = 55.41% test acc., 52.07% forget-client acc.)
 - [ ] Phase 06 — Knowledge Distillation
 - [ ] Phase 07 — Unlearning Engine
 - [ ] Phase 08 — Evaluation Framework (partial)

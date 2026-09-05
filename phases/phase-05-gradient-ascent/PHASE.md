@@ -1,6 +1,6 @@
 # Phase 05 — Gradient Ascent
 
-**Status:** Code complete, unit-tested; not yet run against real CIFAR-100
+**Status:** Done — real result obtained
 **Depends on:** Phase 03
 
 ## Goal
@@ -43,3 +43,24 @@ Next: run `experiments/run_gradient_ascent.py`, then compare
 `M_unlearn`'s test/forget-client accuracy against `M_old` (60.02%/n/a)
 and `M_retrain` (70.89%/65.30%) to judge whether gradient ascent
 approximates full retraining's forgetting effect without its cost.
+
+**Result (GPU, Colab, real CIFAR-100):**
+
+- `M_old` (before unlearning): 60.02% test acc., 67.10% forget-client acc.
+- `M_unlearn` (after 5 epochs of ascent): 55.41% test acc., 52.07% forget-client acc.
+
+Forget-client accuracy dropped 15.0 points vs. only 4.6 points on
+overall test accuracy — Gradient Ascent forgets client 0 faster and
+far more cheaply than full retraining (5 epochs on one client vs. 50
+rounds × 10 local epochs across four), but with real collateral
+damage: it also degrades unrelated performance, and its forgetting is
+less thorough than `M_retrain`'s (52.07% vs. 65.30% forget-client
+acc. — counterintuitively *lower* than M_retrain's, since M_retrain
+never learned that data at all under a from-scratch fit that also
+improved overall, whereas GA is actively editing a model that already
+knew it). This cost/precision tradeoff is the expected weakness of
+plain gradient ascent from the literature, and motivates Phase 06's
+Knowledge Distillation approach as a potential improvement.
+
+Artifacts: `artifacts/experiments/unlearning_ga_kd/gradient_ascent/`
+(`m_unlearn_final.pt`, `metrics.json`).
