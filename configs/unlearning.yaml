@@ -19,6 +19,7 @@ gradient_ascent:
   lr: 0.001
   epochs: 5
   batch_size: 32
+  max_grad_norm: 1.0   # prevents the unbounded ascent objective from diverging
 
 knowledge_distillation:
   temperature: 2.0
