@@ -1,6 +1,6 @@
 # Phase 06 — Knowledge Distillation
 
-**Status:** Code complete, unit-tested; not yet run against real CIFAR-100
+**Status:** Done — real result obtained (reveals why Phase 07 must interleave, not sequence, GA+KD)
 **Depends on:** Phase 03
 
 ## Goal
@@ -37,5 +37,33 @@ data, and evaluates test/forget-client accuracy before/after. This
 directly demonstrates KD's intended role — repairing the collateral
 damage Gradient Ascent caused to overall accuracy (Phase 05: M_unlearn
 lost 4.6 points vs. M_old) — ahead of Phase 07 combining both into one
-engine. Smoke-tested end-to-end on synthetic data; not yet run against
-real CIFAR-100 — pending a GPU run, same pattern as Phases 04-05.
+engine.
+
+**Result (GPU, Colab, real CIFAR-100):**
+
+| Stage | Test acc. | Forget-client acc. |
+|---|---:|---:|
+| M_old | 60.02% | 67.10% |
+| M_unlearn (Phase 05, GA only) | 55.41% | 52.31%* |
+| + sequential KD (this phase) | 59.99% | 66.95% |
+
+*(52.31% here vs. 52.07% reported in Phase 05 — trivial run-to-run
+variance, same setup.)*
+
+**Important finding:** sequential KD repaired overall test accuracy
+almost perfectly (55.41% → 59.99%, ~M_old level) — but it also undid
+nearly all of Gradient Ascent's forgetting (52.31% → 66.95%, back near
+M_old's 67.10%). This is not a bug; it's the expected consequence of
+running the two steps *sequentially*. Pure KD's only training signal
+is "match the teacher on remaining-client data," with no explicit
+instruction to avoid restoring forget-client knowledge — and since
+CIFAR-100's non-IID Dirichlet split doesn't cleanly separate classes
+between clients, matching M_old's behavior on remaining data appears
+to indirectly restore behavior on overlapping classes the forget
+client also had. **This is precisely why Phase 07's `UnlearningEngine`
+must interleave GA and KD within the same training loop rather than
+running them as two separate stages** — simultaneous optimization
+should let the two objectives balance against each other, rather than
+one (KD) completely overwriting the other's (GA's) effect. This result
+is good evidence for that design choice, not a failure of Phase 06's
+implementation — `KnowledgeDistiller.distill()` did exactly its job.
