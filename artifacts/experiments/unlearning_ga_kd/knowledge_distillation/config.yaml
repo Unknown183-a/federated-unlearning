@@ -1,0 +1,2 @@
+base_config: configs/cifar100_fl_colab.yaml
+unlearning_config: configs/unlearning.yaml
