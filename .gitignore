@@ -6,3 +6,4 @@ data/raw/
 artifacts/**/*.pt
 *.egg-info/
 .DS_Store
+!artifacts/experiments/cifar100_fl/imported_original_model.pt
