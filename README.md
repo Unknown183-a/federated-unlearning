@@ -29,6 +29,12 @@ zero setup.
 - [ ] Phase 11 — Plots + Reports
 - [ ] Phase 12 — Final Report / Viva
 
+## Results
+
+Full write-up with sources for every number: **[docs/results.md](docs/results.md)**
+
+![Comparison chart](docs/images/phase04-06-comparison.png)
+
 **Progress**
 
 ```
