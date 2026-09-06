@@ -18,12 +18,27 @@ from __future__ import annotations
 import copy
 import itertools
 from dataclasses import dataclass
-from typing import Any, Dict
+from typing import Any, Dict, List
 
 import torch
 import torch.nn as nn
 
 from .losses import gradient_ascent_loss, kd_loss
+
+
+def _clip_grads_by_norm(grads: List[torch.Tensor], max_norm: float) -> List[torch.Tensor]:
+    """Scale a list of gradient tensors so their combined L2 norm <= max_norm.
+
+    Unlike torch.nn.utils.clip_grad_norm_, this operates on plain gradient
+    tensors (not parameters with a populated .grad), so it can be applied
+    to the forgetting and KD gradients independently before they're
+    combined into a single update.
+    """
+    total_norm = torch.sqrt(sum(g.pow(2).sum() for g in grads))
+    if total_norm > max_norm:
+        scale = max_norm / (total_norm + 1e-6)
+        grads = [g * scale for g in grads]
+    return grads
 
 
 @dataclass
@@ -67,6 +82,7 @@ class UnlearningEngine:
         lambda_kd = self.config.get("lambda_kd", 1.0)
         temperature = self.config.get("temperature", 2.0)
         epochs = self.config["epochs"]
+        params = list(student.parameters())
 
         n_forget, n_remaining = len(forget_loader), len(remaining_loader)
         history = []
@@ -82,14 +98,27 @@ class UnlearningEngine:
                 with torch.no_grad():
                     teacher_logits = teacher(xr)
 
+                # Backprop each objective separately and clip each
+                # gradient independently BEFORE combining. Clipping the
+                # combined sum instead would let the unbounded ascent
+                # term's raw gradient magnitude dominate the update
+                # direction regardless of lambda weighting, since
+                # clipping only rescales magnitude, not per-term balance.
                 forget_l = gradient_ascent_loss(student(xf), yf)
+                forget_grads = torch.autograd.grad(forget_l, params, retain_graph=True, allow_unused=True)
+                forget_grads = [g if g is not None else torch.zeros_like(p) for g, p in zip(forget_grads, params)]
+
                 kd_l = kd_loss(student(xr), teacher_logits, temperature=temperature)
-                loss = lambda_forget * forget_l + lambda_kd * kd_l
+                kd_grads = torch.autograd.grad(kd_l, params, allow_unused=True)
+                kd_grads = [g if g is not None else torch.zeros_like(p) for g, p in zip(kd_grads, params)]
+
+                if max_grad_norm is not None:
+                    forget_grads = _clip_grads_by_norm(forget_grads, max_grad_norm)
+                    kd_grads = _clip_grads_by_norm(kd_grads, max_grad_norm)
 
                 optimizer.zero_grad()
-                loss.backward()
-                if max_grad_norm is not None:
-                    torch.nn.utils.clip_grad_norm_(student.parameters(), max_grad_norm)
+                for p, fg, kg in zip(params, forget_grads, kd_grads):
+                    p.grad = lambda_forget * fg + lambda_kd * kg
                 optimizer.step()
 
                 epoch_forget_loss += forget_l.item()

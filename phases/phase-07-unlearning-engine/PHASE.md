@@ -56,5 +56,39 @@ engine, evaluates test/forget-client accuracy before/after. Reuses
 `temperature`/`lambda_forget`/`lambda_kd` (it already carried
 `lambda_forget` unused in Phase 06, clearly anticipating this engine)
 and `gradient_ascent`'s `batch_size`/`max_grad_norm` for the forget
-side. Smoke-tested end-to-end on synthetic data; not yet run against
-real CIFAR-100 — pending a GPU run, same pattern as Phases 04-06.
+side.
+
+**First real GPU result (before a bug fix, kept here for the record):**
+
+| Model | Test acc. | Forget-client acc. |
+|---|---:|---:|
+| M_old | 60.02% | 67.10% |
+| GA only (Phase 05) | 55.41% | 52.31% |
+| GA+KD sequential (Phase 06) | 59.99% | 66.95% |
+| GA+KD joint (first attempt) | 50.00% | 38.13% |
+
+This was worse than plain GA on *both* axes — defeating the purpose of
+adding KD at all. `training_history` showed why: `kd_loss` increased
+every epoch (0.12 → 0.45) instead of decreasing, meaning the
+preservation objective never converged. Root cause: gradient clipping
+(`max_grad_norm`) was applied to the *combined* `lambda_forget *
+L_forget + lambda_kd * L_KD` loss's gradient as one sum. Since the
+unbounded ascent term's raw gradient magnitude is much larger than
+KD's bounded KL-divergence term, clipping the sum still left the
+update direction dominated by the forgetting term almost entirely,
+regardless of the nominal 1:1 lambda weighting — clipping only rescales
+magnitude, it doesn't rebalance which term controls direction.
+
+**Fix:** backprop each loss separately (`torch.autograd.grad` per
+objective) and clip each gradient independently (new
+`_clip_grads_by_norm` helper, since `torch.nn.utils.clip_grad_norm_`
+only operates on parameters' populated `.grad`, not arbitrary gradient
+tensor lists) *before* combining them with `lambda_forget`/`lambda_kd`
+into the actual parameter update. Verified on a realistically
+under-fit (not overfit) synthetic model: with the exact same
+`lr=0.001, epochs=5, lambda_kd=1.0` config values that produced the bad
+result above, the fixed version now drops remaining accuracy only
+moderately (67.2% → 57.8%) while forgetting *more* (62.5% → 43.8%) —
+forgetting outpacing collateral damage, the correct direction, unlike
+before. All 13 repo tests still pass. Not yet reconfirmed on real
+CIFAR-100 — pending a GPU rerun with this fix in place.
