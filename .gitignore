@@ -7,3 +7,9 @@ artifacts/**/*.pt
 *.egg-info/
 .DS_Store
 !artifacts/experiments/cifar100_fl/imported_original_model.pt
+!artifacts/experiments/full_retraining/m_retrain_final.pt
+!artifacts/experiments/unlearning_ga_kd/gradient_ascent/m_unlearn_final.pt
+!artifacts/experiments/unlearning_ga_kd/knowledge_distillation/m_distilled_final.pt
+!artifacts/experiments/unlearning_ga_kd/engine/m_unlearn_final.pt
+# Note: intermediate round-by-round checkpoints (e.g. full_retraining/checkpoints/round_*.pt)
+# stay excluded — ~10 files x ~43MB each per run, not needed once the final checkpoint exists.
