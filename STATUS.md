@@ -6,17 +6,17 @@ both when a phase finishes.
 
 ## Current phase
 
-**Phase 07 — Unlearning Engine** (not started)
+**Phase 08 — Evaluation Framework** (partial — see below)
 
-Phases 00-06 are complete with real results, all against the real
+Phases 00-07 are complete with real results, all against the real
 CIFAR-100 + ResNet-18 setup. M_old was imported from a pre-refactor
-checkpoint; M_retrain was retrained via FedProx on GPU (Colab); M_unlearn
-(Gradient Ascent) was produced by running 5 epochs of ascent on the
-forget client's data starting from M_old; Knowledge Distillation was
-run standalone (sequentially, after GA) to test whether it repairs GA's
-collateral damage. Phase 08 (Evaluation Framework) is partially done
-ahead of schedule — accuracy/cost/comparison utilities exist since they
-only depend on Phase 03, not on the unlearning engine.
+checkpoint; M_retrain was retrained via FedProx on GPU (Colab);
+Gradient Ascent, sequential KD, and the final joint GA+KD engine were
+all run for real on GPU. accuracy/cost/comparison utilities in Phase 08
+already exist and are in active use (`build_comparison_table` generates
+`artifacts/experiments/comparison_table.csv`); forgetting/MIA metrics
+are still blocked on nothing now that the unlearning engine exists —
+MIA itself is Phase 09's job.
 
 **Results** (CIFAR-100, 5 clients, non-IID Dirichlet α=0.5, forget client = 0):
 
@@ -26,6 +26,7 @@ only depend on Phase 03, not on the unlearning engine.
 | M_retrain (FedProx, gold standard)        | 70.89%             | 65.30%                | 50 rounds × 10 local epochs, μ=0.01 |
 | M_unlearn (Gradient Ascent only)          | 55.41%             | 52.31%                | 5 epochs on forget client only |
 | M_unlearn + sequential KD                 | 59.99%             | 66.95%                | + 5 epochs KD on remaining clients |
+| **M_unlearn (joint GA+KD engine, final)** | **57.78%**          | **57.36%**             | 5 epochs joint, λ_forget=1.0, λ_kd=1.0 |
 
 **Interpretation:** Gradient Ascent forgot client 0's data faster and
 far cheaper than full retraining, but less precisely: forget-client
@@ -35,20 +36,29 @@ to unrelated knowledge, a known weakness of plain gradient ascent. By
 contrast, M_retrain improved on *both* axes relative to M_old, since
 it's a from-scratch fit rather than a targeted edit.
 
-**Critical finding from Phase 06:** applying KD *sequentially* after GA
-repaired overall accuracy almost perfectly (55.41% → 59.99%, ~M_old
-level) — but also undid nearly all of the forgetting (52.31% → 66.95%,
-back near M_old's 67.10%). Pure KD's only signal is "match the teacher
-on remaining-client data," with no instruction to preserve GA's
-forgetting, and non-IID class overlap between clients means matching
-M_old on remaining data appears to restore behavior on overlapping
-forget-client classes too. **This means Phase 07's `UnlearningEngine`
-cannot just call `GradientAscentUnlearner` then `KnowledgeDistiller` in
-sequence — it must interleave both objectives within the same training
-loop** (alternating or jointly-weighted GA+KD steps, using
-`lambda_forget`/`lambda_kd` from `configs/unlearning.yaml` to balance
-them), or the KD half will erase the GA half's entire effect. This is
-the central design question Phase 07 needs to get right.
+**Phase 06 finding:** applying KD *sequentially* after GA repaired
+overall accuracy almost perfectly (55.41% → 59.99%, ~M_old level) — but
+also undid nearly all of the forgetting (52.31% → 66.95%, back near
+M_old's 67.10%). This showed the two objectives can't be run as
+separate stages — KD's only signal is "match the teacher," with nothing
+telling it to preserve GA's forgetting.
+
+**Phase 07 result:** implemented `UnlearningEngine` per
+`docs/methodology.md`'s combined loss (`L_total = λ_forget·L_forget +
+λ_kd·L_KD`), computed jointly each step rather than sequentially. First
+attempt had a real bug — clipping the *combined* gradient let the
+unbounded ascent term dominate regardless of λ weighting, producing a
+result worse than plain GA on both axes (50.00%/38.13%). Fixed by
+clipping each loss's gradient independently before combining. The real,
+final result — 57.78% test / 57.36% forget-client accuracy — is a
+genuine middle ground: much less collateral damage than GA alone
+(−2.24 vs. −4.61 points) while still meaningfully forgetting (−9.74
+points vs. sequential KD's −0.15). Not a strict win on both axes over
+GA alone, but a real, working balance point — see
+`phases/phase-07-unlearning-engine/PHASE.md` for the full bug/fix story
+and `docs/results.md` for the complete writeup. A λ_forget/λ_kd sweep
+(not yet done) would trace the full tradeoff curve rather than one
+point on it — natural next step if more GPU time becomes available.
 
 ```
 Data pipeline      ██████████ 100%
@@ -57,7 +67,7 @@ Evaluation utils   ████░░░░░░  40%   (accuracy/cost/comparis
 Full retraining    ██████████ 100%
 Gradient ascent    ██████████ 100%
 Knowledge distill. ██████████ 100%
-Unlearning engine  ░░░░░░░░░░   0%
+Unlearning engine  ██████████ 100%
 MIA                ░░░░░░░░░░   0%
 Experiments/report ░░░░░░░░░░   0%
 ```
@@ -70,8 +80,8 @@ Experiments/report ░░░░░░░░░░   0%
 - [x] Phase 03 — Initial FL Experiment (real result: CIFAR-100+ResNet-18, M_old = 60.02% test acc.)
 - [x] Phase 04 — Full Retraining Baseline (real result: M_retrain = 70.89% test acc., 65.30% forget-client acc., via FedProx — see history above)
 - [x] Phase 05 — Gradient Ascent (real result: M_unlearn = 55.41% test acc., 52.31% forget-client acc. — see interpretation above)
-- [x] Phase 06 — Knowledge Distillation (real result: sequential KD repairs accuracy but also undoes forgetting — see critical finding above)
-- [ ] Phase 07 — Unlearning Engine
+- [x] Phase 06 — Knowledge Distillation (real result: sequential KD repairs accuracy but also undoes forgetting — see finding above)
+- [x] Phase 07 — Unlearning Engine (real result: joint engine = 57.78% test acc., 57.36% forget-client acc. — see result above)
 - [ ] Phase 08 — Evaluation Framework (partial — see above)
 - [ ] Phase 09 — MIA
 - [ ] Phase 10 — Controlled Experiments
@@ -80,9 +90,8 @@ Experiments/report ░░░░░░░░░░   0%
 
 ## Next action
 
-Start Phase 07 (Unlearning Engine) in
-`phases/phase-07-unlearning-engine/PHASE.md`. Given the critical
-finding above, the engine MUST interleave Gradient Ascent and
-Knowledge Distillation steps rather than sequencing them — verify the
-PHASE.md spec agrees before implementing, and if it's ambiguous on
-this point, interleave anyway based on this evidence.
+Start Phase 09 (MIA) in `phases/phase-09-mia/PHASE.md`, or consider a
+λ_forget/λ_kd sweep on Phase 07's engine first if more GPU time is
+available — either strengthens the thesis, MIA adds a rigorous privacy
+metric beyond accuracy, the sweep shows the full tradeoff curve rather
+than one point on it.

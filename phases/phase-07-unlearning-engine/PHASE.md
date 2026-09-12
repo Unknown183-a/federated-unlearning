@@ -1,6 +1,6 @@
 # Phase 07 — Unlearning Engine
 
-**Status:** Code complete, unit-tested; not yet run against real CIFAR-100
+**Status:** Done — real result obtained (57.78% test acc., 57.36% forget-client acc.)
 **Depends on:** Phase 05, Phase 06
 
 ## Goal
@@ -90,5 +90,29 @@ under-fit (not overfit) synthetic model: with the exact same
 result above, the fixed version now drops remaining accuracy only
 moderately (67.2% → 57.8%) while forgetting *more* (62.5% → 43.8%) —
 forgetting outpacing collateral damage, the correct direction, unlike
-before. All 13 repo tests still pass. Not yet reconfirmed on real
-CIFAR-100 — pending a GPU rerun with this fix in place.
+before. All 13 repo tests still pass.
+
+**Confirmed on real CIFAR-100 (GPU, Colab), same hyperparameters:**
+
+- `M_unlearn` (joint, fixed) overall test accuracy: **57.78%**
+- `M_unlearn` (joint, fixed) forget-client accuracy: **57.36%**
+
+`training_history` in the committed `metrics.json` confirms the fix
+worked as diagnosed: `kd_loss` stayed nearly flat across epochs
+(0.105 → 0.123), versus nearly quadrupling (0.12 → 0.45) in the buggy
+version.
+
+This is a genuine middle ground, not a strict win over GA alone on both
+axes — it trades some forgetting strength for much less collateral
+damage: only −2.24 points of overall accuracy loss (vs. GA's −4.61),
+while still meaningfully forgetting (−9.74 points on the forget client,
+vs. sequential KD's essentially-zero −0.15). With equal λ weights, this
+is one point on a real precision-vs-cost tradeoff curve. A proper
+λ_forget/λ_kd sweep (not yet done — would need more GPU time than one
+Colab session) would trace that whole curve rather than one point on
+it, and is the natural next step if more compute becomes available
+(the professor's offered GPU access would be well spent here).
+
+Artifacts: `artifacts/experiments/unlearning_ga_kd/engine/`
+(`m_unlearn_final.pt`, `metrics.json`, `config.yaml`). Full writeup
+with chart: `docs/results.md`.

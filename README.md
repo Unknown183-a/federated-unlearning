@@ -22,7 +22,7 @@ zero setup.
 - [x] Phase 04 — Full Retraining Baseline (real result: M_retrain = 70.89% test acc., 65.30% forget-client acc., via FedProx)
 - [x] Phase 05 — Gradient Ascent (real result: M_unlearn = 55.41% test acc., 52.07% forget-client acc.)
 - [x] Phase 06 — Knowledge Distillation (real result: sequential KD repairs accuracy but also undoes forgetting)
-- [ ] Phase 07 — Unlearning Engine
+- [x] Phase 07 — Unlearning Engine (real result: joint engine = 57.78% test acc., 57.36% forget-client acc. — balances GA and KD instead of either extreme)
 - [ ] Phase 08 — Evaluation Framework (partial)
 - [ ] Phase 09 — MIA
 - [ ] Phase 10 — Controlled Experiments
@@ -33,7 +33,7 @@ zero setup.
 
 Full write-up with sources for every number: **[docs/results.md](docs/results.md)**
 
-![Comparison chart](docs/images/phase04-06-comparison.png)
+![Comparison chart](docs/images/phase04-07-comparison.png)
 
 **Progress**
 

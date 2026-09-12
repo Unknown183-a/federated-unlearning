@@ -1,4 +1,4 @@
-# Results (Phases 03–06)
+# Results (Phases 03–07)
 
 This is a running summary of real experimental results, kept in sync with
 `STATUS.md`. Every number here traces back to a committed file under
@@ -11,7 +11,7 @@ partition (α=0.5), client 0 designated as the "forget client" throughout.
 
 ## Summary
 
-![Comparison chart](images/phase04-06-comparison.png)
+![Comparison chart](images/phase04-07-comparison.png)
 
 | Model | Overall test acc. | Forget-client acc. | Cost | Source |
 |---|---:|---:|---|---|
@@ -19,6 +19,7 @@ partition (α=0.5), client 0 designated as the "forget client" throughout.
 | **M_retrain** (gold standard) | **70.89%** | **65.30%** | 50 rounds × 10 local epochs, FedProx μ=0.01 | `full_retraining/metrics.csv`, `forget_client_metrics.json` |
 | M_unlearn (Gradient Ascent only) | 55.41% | 52.07% | 5 epochs on forget client only | `unlearning_ga_kd/gradient_ascent/metrics.json` |
 | M_unlearn + sequential KD | 59.99% | 66.95% | + 5 epochs KD on remaining clients | `unlearning_ga_kd/knowledge_distillation/metrics.json` |
+| **M_unlearn (joint GA+KD engine)** | **57.78%** | **57.36%** | 5 epochs joint, λ_forget=1.0, λ_kd=1.0 | `unlearning_ga_kd/engine/metrics.json` |
 
 ¹ `M_old`'s original training partition (the pre-refactor `main.py`) was
 unseeded, so which samples belonged to "client 0" at training time can't be
@@ -64,9 +65,48 @@ indirectly restores behavior on overlapping forget-client classes too.
 **This means the two objectives cannot be run as separate sequential
 stages** — they need to be jointly optimized so both are balanced against
 each other at every training step, not one completely overwriting the
-other's effect afterward. See Phase 07 for the joint engine built to
-address this (in progress — see `STATUS.md` for the latest state, since
-that phase is still being tuned as of this writing).
+other's effect afterward.
+
+### Phase 07 — Unlearning Engine (joint GA+KD)
+
+Per `docs/methodology.md`'s combined objective (`L_total = λ_forget · L_forget
++ λ_kd · L_KD`), `src/unlearning/engine.py::UnlearningEngine` trains one
+student model with both losses computed jointly every step — not by
+calling `GradientAscentUnlearner` then `KnowledgeDistiller` in sequence,
+despite that being this phase's original scaffold wording (see that
+file's PHASE.md handoff notes for why this was a deliberate, evidenced
+deviation).
+
+**First attempt had a real bug:** gradient clipping was applied to the
+*combined* loss's gradient as one sum. Since the unbounded ascent term's
+raw gradient magnitude is much larger than KD's bounded term, clipping the
+sum still left the update direction dominated by forgetting regardless of
+the nominal 1:1 λ weighting. Result: worse than plain GA on *both* axes
+(50.00% test / 38.13% forget-client accuracy) — defeating the point of
+adding KD at all.
+
+**Fix:** backprop each loss separately and clip each gradient
+independently *before* combining them into the parameter update (see
+`_clip_grads_by_norm` in `engine.py`). Rerunning with the identical
+hyperparameters produced the real, final result in the table above:
+**57.78% test accuracy, 57.36% forget-client accuracy.**
+
+This is a genuine middle ground, not a strict improvement over GA on both
+axes — it trades some forgetting strength for much less collateral
+damage: only −2.24 points of overall accuracy loss (vs. GA alone's
+−4.61), while still meaningfully forgetting (−9.74 points on the forget
+client, vs. sequential KD's essentially-zero −0.15 points). The
+`training_history` in the committed `metrics.json` shows this directly:
+`kd_loss` stayed nearly flat across epochs (0.105 → 0.123) with the fix,
+versus nearly quadrupling (0.12 → 0.45) in the buggy version — direct
+evidence the fix worked as diagnosed.
+
+With equal λ weights, the joint method sits at one point on a real
+precision-vs-cost tradeoff curve. A proper hyperparameter sweep over
+λ_forget/λ_kd (not yet done — would benefit from more GPU time than a
+single Colab session allows) would trace out that whole curve rather
+than one point on it, and is the natural next step for strengthening
+this result.
 
 ## Reproducing these numbers
 
@@ -75,6 +115,7 @@ python experiments/run_cifar100_fl.py --config configs/cifar100_fl.yaml        #
 python experiments/run_full_retraining.py                                      # M_retrain
 python experiments/run_gradient_ascent.py                                      # M_unlearn (GA)
 python experiments/run_knowledge_distillation.py                               # + sequential KD
+python experiments/run_unlearning_engine.py                                    # M_unlearn (joint GA+KD, final)
 ```
 
 `M_old`'s checkpoint (`artifacts/experiments/cifar100_fl/imported_original_model.pt`)

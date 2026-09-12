@@ -3,3 +3,4 @@ cost,forget_client_accuracy,model,overall_test_accuracy,source_file
 "50 rounds x 10 local epochs, mu=0.01",0.6530454895913647,"M_retrain (FedProx, gold standard)",0.7089,"artifacts/experiments/full_retraining/metrics.csv, forget_client_metrics.json"
 5 epochs on forget client only,0.5206887689539964,M_unlearn (Gradient Ascent only),0.5541,artifacts/experiments/unlearning_ga_kd/gradient_ascent/metrics.json
 + 5 epochs KD on remaining clients (run separately after GA),0.6694937034181444,M_unlearn + sequential KD,0.5999,artifacts/experiments/unlearning_ga_kd/knowledge_distillation/metrics.json
+"5 epochs joint, lambda_forget=1.0, lambda_kd=1.0",0.5736314572089437,"M_unlearn (joint GA+KD engine, final)",0.5778,artifacts/experiments/unlearning_ga_kd/engine/metrics.json
