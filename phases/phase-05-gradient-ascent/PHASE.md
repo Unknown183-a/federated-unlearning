@@ -34,15 +34,7 @@ Added `experiments/run_gradient_ascent.py` (not explicitly required by
 the task list above, but needed to actually produce a comparable
 `M_unlearn`): loads `M_old` from `configs/unlearning.yaml`'s
 `base_checkpoint`, runs ascent on the forget client's real data, and
-evaluates test/forget-client accuracy before and after. Smoke-tested
-end-to-end on synthetic data (checkpoint load → unlearn → evaluate all
-run cleanly); not yet run against real CIFAR-100 — pending a GPU run,
-same as Phase 04.
-
-Next: run `experiments/run_gradient_ascent.py`, then compare
-`M_unlearn`'s test/forget-client accuracy against `M_old` (60.02%/n/a)
-and `M_retrain` (70.89%/65.30%) to judge whether gradient ascent
-approximates full retraining's forgetting effect without its cost.
+evaluates test/forget-client accuracy before and after.
 
 **Result (GPU, Colab, real CIFAR-100):**
 
